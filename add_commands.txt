@@ -1,0 +1,14 @@
+
+	// Register stop game command
+	const stopGameCommand = vscode.commands.registerCommand('ludo-player.stopGame', () => {
+		provider.stopGame();
+		vscode.window.showInformationMessage('🛑 Game stopped and resources freed');
+	});
+
+	// Register refresh game command  
+	const refreshGameCommand = vscode.commands.registerCommand('ludo-player.refreshGame', () => {
+		provider.refreshGame();
+		vscode.window.showInformationMessage('🔄 Game refreshed');
+	});
+
+	context.subscriptions.push(stopGameCommand, refreshGameCommand);

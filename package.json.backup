@@ -9,7 +9,7 @@
     "url": "https://github.com/your-username/ludo-player-vscode"
   },
   "engines": {
-    "vscode": "^1.102.0"
+    "vscode": "^1.85.0"
   },
   "categories": [
     "Other"

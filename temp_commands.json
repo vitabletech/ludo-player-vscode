@@ -1,0 +1,18 @@
+    "commands": [
+      {
+        "command": "ludo-player.playLudo",
+        "title": "Play Ludo",
+        "category": "Ludo",
+        "keywords": ["ludo", "game", "play", "board game", "dice"]
+      },
+      {
+        "command": "ludo-player.stopGame",
+        "title": "Stop Game",
+        "category": "Ludo"
+      },
+      {
+        "command": "ludo-player.refreshGame",
+        "title": "Refresh Game",
+        "category": "Ludo"
+      }
+    ],

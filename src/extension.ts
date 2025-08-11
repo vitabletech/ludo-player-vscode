@@ -2,116 +2,229 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 
-class LudoGamePanel {
-	private static _currentPanel: LudoGamePanel | undefined;
-	public static readonly viewType = 'ludoGame';
+class LudoGameViewProvider implements vscode.WebviewViewProvider {
+	public static readonly viewType = 'ludo-player.gameView';
 
-	private readonly _panel: vscode.WebviewPanel;
-	private readonly _extensionUri: vscode.Uri;
-	private readonly _disposables: vscode.Disposable[] = [];
+	private _view?: vscode.WebviewView;
+	private _isGameLoaded = false;
 
-	public static get currentPanel(): LudoGamePanel | undefined {
-		return LudoGamePanel._currentPanel;
-	}
+	constructor(private readonly _extensionUri: vscode.Uri) { }
 
-	public static createOrShow(extensionUri: vscode.Uri) {
-		const column = vscode.window.activeTextEditor
-			? vscode.window.activeTextEditor.viewColumn
-			: undefined;
+	public resolveWebviewView(
+		webviewView: vscode.WebviewView,
+		context: vscode.WebviewViewResolveContext,
+		_token: vscode.CancellationToken,
+	) {
+		this._view = webviewView;
 
-		// If we already have a panel, show it
-		if (LudoGamePanel._currentPanel) {
-			LudoGamePanel._currentPanel._panel.reveal(column);
-			return;
-		}
+		webviewView.webview.options = {
+			// Allow scripts in the webview
+			enableScripts: true,
+			localResourceRoots: [
+				this._extensionUri
+			]
+		};
 
-		// Otherwise, create a new panel
-		const panel = vscode.window.createWebviewPanel(
-			LudoGamePanel.viewType,
-			'🎲 Ludo Game',
-			column || vscode.ViewColumn.One,
-			{
-				// Enable javascript in the webview
-				enableScripts: true,
-				// And restrict the webview to only load content from our extension's `media` directory
-				localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'media')],
-				// Allow the webview to retain context when it becomes hidden
-				retainContextWhenHidden: true
-			}
-		);
+		// Start with the welcome screen instead of loading the game immediately
+		webviewView.webview.html = this._getWelcomeHtml();
 
-		LudoGamePanel._currentPanel = new LudoGamePanel(panel, extensionUri);
-	}
+		// Set initial title and description
+		webviewView.title = "";
+		webviewView.description = "";
 
-	private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
-		this._panel = panel;
-		this._extensionUri = extensionUri;
-
-		// Set the webview's initial html content
-		// Use setTimeout to avoid async operation in constructor
-		setTimeout(() => {
-			this._update();
-		}, 0);
-
-		// Listen for when the panel is disposed
-		// This happens when the user closes the panel or when the panel is closed programmatically
-		this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
-
-		// Update the content based on view changes
-		this._panel.onDidChangeViewState(
-			e => {
-				if (this._panel.visible) {
-					this._update();
+		// Handle messages from the webview
+		webviewView.webview.onDidReceiveMessage(
+			message => {
+				switch (message.command) {
+					case 'startGame':
+						this._loadGame();
+						break;
+					case 'stopGame':
+						this._stopGame();
+						break;
+					case 'refreshGame':
+						this._refreshGame();
+						break;
 				}
-			},
-			null,
-			this._disposables
+			}
 		);
 	}
 
-	public dispose() {
-		LudoGamePanel._currentPanel = undefined;
-
-		// Clean up our resources
-		this._panel.dispose();
-
-		while (this._disposables.length) {
-			const x = this._disposables.pop();
-			if (x) {
-				x.dispose();
-			}
+	private _loadGame() {
+		if (this._view) {
+			this._isGameLoaded = true;
+			this._view.webview.html = this._getGameHtml();
 		}
 	}
 
-	private async _update() {
-		const webview = this._panel.webview;
-		this._panel.title = '🎲 Ludo Game';
-		this._panel.webview.html = await this._getHtmlForWebview(webview);
+	private _stopGame() {
+		if (this._view) {
+			this._isGameLoaded = false;
+			this._view.webview.html = this._getWelcomeHtml();
+		}
 	}
 
-	private async _getHtmlForWebview(webview: vscode.Webview): Promise<string> {
-		// Get the external URI for the ludo game
-		const gameUri = await vscode.env.asExternalUri(vscode.Uri.parse('https://ludoking.com/play'));
-		
+	private _refreshGame() {
+		if (this._view && this._isGameLoaded) {
+			this._view.webview.html = this._getGameHtml();
+		}
+	}
+
+	private _getWelcomeHtml(): string {
 		return `<!DOCTYPE html>
 			<html lang="en">
 			<head>
 				<meta charset="UTF-8">
 				<meta name="viewport" content="width=device-width, initial-scale=1.0">
-				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src ${gameUri} https://ludoking.com; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
+				<title>Ludo Game</title>
+				<style>
+					body {
+						margin: 0;
+						padding: 16px;
+						background: var(--vscode-editor-background, #1e1e1e);
+						color: var(--vscode-editor-foreground, #fff);
+						font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+						height: 100vh;
+						display: flex;
+						flex-direction: column;
+						box-sizing: border-box;
+					}
+					
+					.welcome-container {
+						display: flex;
+						flex-direction: column;
+						align-items: center;
+						justify-content: center;
+						flex: 1;
+						text-align: center;
+					}
+					
+					.game-icon {
+						font-size: 48px;
+						margin-bottom: 16px;
+						animation: bounce 2s infinite;
+					}
+					
+					@keyframes bounce {
+						0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+						40% { transform: translateY(-10px); }
+						60% { transform: translateY(-5px); }
+					}
+					
+					.welcome-title {
+						font-size: 18px;
+						font-weight: 600;
+						margin-bottom: 8px;
+						color: var(--vscode-editor-foreground);
+					}
+					
+					.welcome-description {
+						font-size: 14px;
+						opacity: 0.8;
+						margin-bottom: 24px;
+						color: var(--vscode-descriptionForeground);
+						line-height: 1.4;
+					}
+					
+					.button {
+						background: var(--vscode-button-background, #0e639c);
+						color: var(--vscode-button-foreground, #ffffff);
+						border: none;
+						padding: 12px 24px;
+						border-radius: 6px;
+						font-size: 14px;
+						font-weight: 500;
+						cursor: pointer;
+						transition: background-color 0.2s;
+						margin: 4px;
+						min-width: 120px;
+					}
+					
+					.button:hover {
+						background: var(--vscode-button-hoverBackground, #1177bb);
+					}
+					
+					.button:active {
+						transform: translateY(1px);
+					}
+					
+					.status-info {
+						margin-top: 24px;
+						padding: 12px;
+						background: var(--vscode-notifications-background, #2d2d2d);
+						border: 1px solid var(--vscode-notifications-border, #454545);
+						border-radius: 6px;
+						font-size: 12px;
+						opacity: 0.8;
+					}
+					
+					.status-dot {
+						display: inline-block;
+						width: 8px;
+						height: 8px;
+						background: #4ade80;
+						border-radius: 50%;
+						margin-right: 6px;
+					}
+				</style>
+			</head>
+			<body>
+				<div class="welcome-container">
+					<div class="game-icon">🎲</div>
+					<h1 class="welcome-title">Ludo Game</h1>
+					<p class="welcome-description">
+						Ready to play Ludo? Click "Start Game" to load the game.<br>
+						You can stop the game anytime to save resources.
+					</p>
+					
+					<button class="button" onclick="startGame()">
+						🎮 Start Game
+					</button>
+					<p style="font-size: 12px; margin: 8px 0; opacity: 0.7;">
+						Game will open in this panel
+					</p>
+					
+					<div class="status-info">
+						<span class="status-dot"></span>
+						Ready to play • Memory optimized
+					</div>
+				</div>
+				
+				<script>
+					const vscode = acquireVsCodeApi();
+					
+					function startGame() {
+						vscode.postMessage({ command: 'startGame' });
+					}
+				</script>
+			</body>
+			</html>`;
+	}
+
+	private _getGameHtml(): string {
+		return `<!DOCTYPE html>
+			<html lang="en">
+			<head>
+				<meta charset="UTF-8">
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
+				<meta http-equiv="Content-Security-Policy" content="default-src 'none'; frame-src https://ludoking.com; style-src 'unsafe-inline'; script-src 'unsafe-inline';">
 				<title>Ludo Game</title>
 				<style>
 					body {
 						margin: 0;
 						padding: 0;
-						background: #1e1e1e;
+						background: var(--vscode-editor-background, #1e1e1e);
 						overflow: hidden;
-						font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+						font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+						height: 100vh;
+						display: flex;
+						flex-direction: column;
 					}
 					
 					.game-container {
-						width: 100vw;
-						height: 100vh;
+						width: 100%;
+						height: 100%;
 						position: relative;
 						display: flex;
 						flex-direction: column;
@@ -120,25 +233,46 @@ class LudoGamePanel {
 					.game-header {
 						background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 						color: white;
-						padding: 8px 16px;
+						padding: 6px 12px;
 						display: flex;
 						align-items: center;
 						justify-content: space-between;
-						box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+						box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 						z-index: 1000;
+						flex-shrink: 0;
 					}
 					
 					.game-title {
 						font-weight: 600;
-						font-size: 16px;
+						font-size: 12px;
 						display: flex;
 						align-items: center;
-						gap: 8px;
+						gap: 6px;
+					}
+					
+					.game-controls {
+						display: flex;
+						gap: 6px;
+					}
+					
+					.control-btn {
+						background: rgba(255,255,255,0.2);
+						border: none;
+						color: white;
+						padding: 4px 8px;
+						border-radius: 4px;
+						font-size: 10px;
+						cursor: pointer;
+						transition: background-color 0.2s;
+					}
+					
+					.control-btn:hover {
+						background: rgba(255,255,255,0.3);
 					}
 					
 					.status-indicator {
-						width: 8px;
-						height: 8px;
+						width: 6px;
+						height: 6px;
 						background: #4ade80;
 						border-radius: 50%;
 						animation: pulse 2s infinite;
@@ -153,7 +287,8 @@ class LudoGamePanel {
 						flex: 1;
 						border: none;
 						background: white;
-						border-radius: 0 0 8px 8px;
+						width: 100%;
+						height: 100%;
 					}
 					
 					.loading-overlay {
@@ -162,23 +297,23 @@ class LudoGamePanel {
 						left: 0;
 						right: 0;
 						bottom: 0;
-						background: #1e1e1e;
+						background: var(--vscode-editor-background, #1e1e1e);
 						display: flex;
 						flex-direction: column;
 						align-items: center;
 						justify-content: center;
-						color: #fff;
+						color: var(--vscode-editor-foreground, #fff);
 						transition: opacity 0.3s ease;
 					}
 					
 					.loading-spinner {
-						width: 40px;
-						height: 40px;
-						border: 3px solid #333;
-						border-top: 3px solid #667eea;
+						width: 32px;
+						height: 32px;
+						border: 2px solid var(--vscode-progressBar-background, #333);
+						border-top: 2px solid var(--vscode-progressBar-background, #667eea);
 						border-radius: 50%;
 						animation: spin 1s linear infinite;
-						margin-bottom: 16px;
+						margin-bottom: 12px;
 					}
 					
 					@keyframes spin {
@@ -187,8 +322,9 @@ class LudoGamePanel {
 					}
 					
 					.loading-text {
-						font-size: 14px;
+						font-size: 12px;
 						opacity: 0.8;
+						color: var(--vscode-descriptionForeground);
 					}
 					
 					.hidden {
@@ -196,14 +332,10 @@ class LudoGamePanel {
 						pointer-events: none;
 					}
 					
-					/* Hide scrollbars for a cleaner look */
-					.game-frame {
-						scrollbar-width: none;
-						-ms-overflow-style: none;
-					}
-					
-					.game-frame::-webkit-scrollbar {
-						display: none;
+					.game-container {
+						border: 1px solid var(--vscode-panel-border, transparent);
+						border-radius: 4px;
+						overflow: hidden;
 					}
 				</style>
 			</head>
@@ -214,8 +346,13 @@ class LudoGamePanel {
 							🎲 Ludo King
 							<div class="status-indicator"></div>
 						</div>
-						<div style="font-size: 12px; opacity: 0.8;">
-							Playing in VS Code
+						<div class="game-controls">
+							<button class="control-btn" onclick="refreshGame()" title="Refresh Game">
+								🔄
+							</button>
+							<button class="control-btn" onclick="stopGame()" title="Stop Game">
+								⏹️
+							</button>
 						</div>
 					</div>
 					
@@ -226,7 +363,7 @@ class LudoGamePanel {
 					
 					<iframe 
 						class="game-frame" 
-						src="${gameUri}" 
+						src="https://ludoking.com/play" 
 						id="gameFrame"
 						title="Ludo Game"
 						allow="fullscreen; clipboard-read; clipboard-write"
@@ -235,6 +372,8 @@ class LudoGamePanel {
 				</div>
 				
 				<script>
+					const vscode = acquireVsCodeApi();
+					
 					// Hide loading overlay when iframe loads
 					const iframe = document.getElementById('gameFrame');
 					const loadingOverlay = document.getElementById('loadingOverlay');
@@ -249,37 +388,37 @@ class LudoGamePanel {
 					iframe.addEventListener('error', function() {
 						loadingOverlay.innerHTML = 
 							'<div style="text-align: center;">' +
-							'<h3>🎲</h3>' +
-							'<p>Unable to load the game</p>' +
-							'<p style="font-size: 12px; opacity: 0.7;">Please check your internet connection</p>' +
+							'<h3 style="margin: 0; font-size: 16px;">🎲</h3>' +
+							'<p style="margin: 8px 0; font-size: 12px;">Unable to load the game</p>' +
+							'<p style="font-size: 10px; opacity: 0.7; margin: 0;">Check your internet connection</p>' +
+							'<button class="control-btn" onclick="refreshGame()" style="margin-top: 8px;">Try Again</button>' +
 							'</div>';
 					});
 					
-					// Add some keyboard shortcuts for better UX
-					document.addEventListener('keydown', function(e) {
-						// F11 for fullscreen-like experience
-						if (e.key === 'F11') {
-							e.preventDefault();
-							// VS Code will handle the actual fullscreen
-						}
-						
-						// Escape to focus back to editor
-						if (e.key === 'Escape') {
-							// This will help users get back to coding quickly
-							console.log('Escape pressed - returning focus to editor');
-						}
-					});
+					function stopGame() {
+						vscode.postMessage({ command: 'stopGame' });
+					}
 					
-					// Enhance the gaming experience
-					window.addEventListener('message', function(event) {
-						// Handle any messages from the game iframe if needed
-						if (event.origin === 'https://ludoking.com') {
-							console.log('Game message received:', event.data);
-						}
-					});
+					function refreshGame() {
+						vscode.postMessage({ command: 'refreshGame' });
+					}
 				</script>
 			</body>
 			</html>`;
+	}
+
+	public refreshGame() {
+		if (this._view) {
+			if (this._isGameLoaded) {
+				this._view.webview.html = this._getGameHtml();
+			} else {
+				this._view.webview.html = this._getWelcomeHtml();
+			}
+		}
+	}
+
+	public stopGame() {
+		this._stopGame();
 	}
 }
 
@@ -291,13 +430,28 @@ export function activate(context: vscode.ExtensionContext) {
 	// This line of code will only be executed once when your extension is activated
 	console.log('🎲 Ludo Player extension is now active!');
 
-	// Register the play ludo command
+	// Create the webview view provider
+	const provider = new LudoGameViewProvider(context.extensionUri);
+
+	// Register the webview view provider
+	context.subscriptions.push(
+		vscode.window.registerWebviewViewProvider(LudoGameViewProvider.viewType, provider, {
+			webviewOptions: {
+				retainContextWhenHidden: true
+			}
+		})
+	);
+
+	// Register the play ludo command (for backward compatibility and quick access)
 	const playLudoCommand = vscode.commands.registerCommand('ludo-player.playLudo', () => {
-		// Show a quick notification
-		vscode.window.showInformationMessage('🎲 Loading Ludo Game...');
+		// Focus on the Ludo Player activity bar
+		vscode.commands.executeCommand('workbench.view.extension.ludo-player');
 		
-		// Create or show the ludo game panel
-		LudoGamePanel.createOrShow(context.extensionUri);
+		// Show a quick notification
+		vscode.window.showInformationMessage('🎲 Ludo Game opened in sidebar!');
+		
+		// Refresh the game
+		provider.refreshGame();
 	});
 
 	context.subscriptions.push(playLudoCommand);
@@ -306,10 +460,11 @@ export function activate(context: vscode.ExtensionContext) {
 	const hasShownWelcome = context.globalState.get('hasShownWelcome', false);
 	if (!hasShownWelcome) {
 		vscode.window.showInformationMessage(
-			'🎲 Ludo Player is ready! Use "Play Ludo" command to start playing.',
+			'🎲 Ludo Player is ready! Check the sidebar or use "Play Ludo" command.',
+			'Open Sidebar',
 			'Play Now'
 		).then(selection => {
-			if (selection === 'Play Now') {
+			if (selection === 'Play Now' || selection === 'Open Sidebar') {
 				vscode.commands.executeCommand('ludo-player.playLudo');
 			}
 		});
@@ -320,7 +475,5 @@ export function activate(context: vscode.ExtensionContext) {
 // This method is called when your extension is deactivated
 export function deactivate() {
 	// Clean up any resources if needed
-	if (LudoGamePanel.currentPanel) {
-		LudoGamePanel.currentPanel.dispose();
-	}
+	console.log('🎲 Ludo Player extension deactivated');
 }

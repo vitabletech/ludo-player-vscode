@@ -1,33 +1,41 @@
 # 🎲 Ludo Player for VS Code
 
-A seamless VS Code extension that lets you play Ludo directly inside your editor without any distractions. Perfect for quick gaming breaks during coding sessions!
+A seamless VS Code extension that lets you play Ludo directly in the sidebar without any distractions. Perfect for quick gaming breaks during coding sessions!
 
 ## Features
 
-- 🎯 **Quick Access**: Search "play ludo" in the command palette and start playing instantly
-- 🖥️ **Seamless Experience**: Game runs in a native-feeling webview panel with custom styling
+- 🎯 **Sidebar Integration**: Game lives in the VS Code sidebar - always accessible, never in the way
+- 🔍 **Quick Access**: Search "play ludo" in the command palette or click the game icon in the activity bar
+- 🖥️ **Seamless Experience**: Native-feeling webview with VS Code theme integration
 - 🎨 **Clean Interface**: Hidden browser UI elements for a distraction-free gaming experience
 - ⚡ **Fast Loading**: Optimized loading with visual feedback
-- 🔄 **Persistent State**: Game state is retained when the panel becomes hidden
+- 🔄 **Persistent State**: Game state is retained when the sidebar is collapsed or hidden
 - ⌨️ **Keyboard Friendly**: Easy navigation and shortcuts
+- 🎨 **Theme Aware**: Adapts to your VS Code theme (dark/light mode)
 
 ## Usage
 
+### Method 1: Activity Bar
+1. **Click the Game Icon**: Look for the 🎲 icon in the VS Code activity bar (left sidebar)
+2. **Start Playing**: The Ludo game will open in the sidebar panel
+
+### Method 2: Command Palette
 1. **Command Palette**: Press `Cmd+Shift+P` (Mac) or `Ctrl+Shift+P` (Windows/Linux)
 2. **Search**: Type "Play Ludo" or "play ludo"
-3. **Start Playing**: Select the command and enjoy!
+3. **Start Playing**: Select the command and the sidebar will open with the game
 
-### Alternative Methods
-- Use the command `Ludo: Play Ludo` from the command palette
-- The extension will show a welcome message on first install with a quick-play option
+### Method 3: Quick Focus
+- The "Play Ludo" command will automatically focus the sidebar and refresh the game
+- Perfect for quickly switching between coding and gaming
 
-## Technical Features
+## UI Design
 
-- **WebView Integration**: Uses VS Code's native webview technology
-- **External URI Handling**: Properly handles external game URLs
-- **Memory Efficient**: Automatic cleanup and resource management
-- **Error Handling**: Graceful handling of network issues
-- **CSP Compliant**: Secure Content Security Policy implementation
+The sidebar implementation provides:
+- **Compact Header**: Shows game status and VS Code integration
+- **Responsive Design**: Adapts to different sidebar widths
+- **VS Code Theme Integration**: Uses VS Code colors and styling
+- **Optimized Layout**: Perfect for smaller sidebar space
+- **Loading States**: Smooth loading experience with VS Code-styled spinner
 
 ## Requirements
 
