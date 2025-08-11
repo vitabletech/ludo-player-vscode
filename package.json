@@ -2,11 +2,11 @@
   "name": "ludo-player",
   "displayName": "🎲 Ludo Player",
   "description": "Play Ludo game seamlessly inside VS Code - Perfect for coding breaks!",
-  "version": "0.0.1",
-  "publisher": "msrajawat298",
+  "version": "0.0.3",
+  "publisher": "vitabletech",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-username/ludo-player-vscode"
+    "url": "https://github.com/msrajawat298/ludo-player-vscode"
   },
   "engines": {
     "vscode": "^1.102.0"

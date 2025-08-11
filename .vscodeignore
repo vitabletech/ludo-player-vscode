@@ -16,3 +16,6 @@ vsc-extension-quickstart.md
 .github/workflows/**
 .github/ISSUE_TEMPLATE/**
 .github/CODEOWNERS
+favicons/**
+CHANGELOG.md
+ARCHITECTURE.md
