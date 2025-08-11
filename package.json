@@ -3,7 +3,7 @@
   "displayName": "🎲 Ludo Player",
   "description": "Play Ludo game seamlessly inside VS Code - Perfect for coding breaks!",
   "version": "0.0.1",
-  "publisher": "your-publisher-name",
+  "publisher": "msrajawat298",
   "repository": {
     "type": "git",
     "url": "https://github.com/your-username/ludo-player-vscode"
